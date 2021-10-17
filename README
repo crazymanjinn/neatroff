@@ -1,0 +1,7 @@
+This repo contains a Nix flake for building neatroff and related
+utilities from http://litcave.rudi.ir/. TeX Gyre and Ghostscript fonts
+from nixpkgs are also converted into compatible format to be used with
+neatroff.
+
+Additionally, pic and tbl are needed and are being pulled from plan9port
+from nixpkgs.
