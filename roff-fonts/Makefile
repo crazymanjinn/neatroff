@@ -19,7 +19,7 @@ build build/devutf:
 	mkdir -p $@
 
 datarootdir := /usr/local/share
-INSTALLDIR := $(DESTDIR)$(datarootdir)/neatroff/font
+INSTALLDIR := $(DESTDIR)$(datarootdir)/neatroff/font/devutf
 
 .PHONY: install
 install:
