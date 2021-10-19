@@ -1,26 +1,26 @@
 { stdenv
+, extraFontPkgs ? [ ]
 , lib
 , ghostscript
 , gyre-fonts
-, gyreSupport ? true
 , nixpkgs
 , neatmkfn
 , mkfn
 }:
 let
-  fonts = [ ghostscript ] ++ (if gyreSupport then [ gyre-fonts ] else [ ]);
+  fonts = [ ghostscript gyre-fonts ] ++ extraFontPkgs;
 in
 stdenv.mkDerivation {
   pname = "roff-fonts";
   version = lib.trivial.release + "-g" + nixpkgs.shortRev;
-    buildInputs = [ neatmkfn mkfn ] ++ fonts;
+  buildInputs = [ neatmkfn mkfn ] ++ fonts;
   srcs = ./.;
 
   enableParallelBuilding = true;
 
   postUnpack = ''
     mkdir -p $sourceRoot/fonts/truetype $sourceRoot/fonts/postscript
-    pushd $sourceRoot/fonts
+    pushd $sourceRoot/fonts > /dev/null
     set +e
     for f in ${lib.concatStringsSep " " fonts}; do
       find -L $f/share/fonts -xdev -type f -name '*.[ot]tf' -print0 |
@@ -29,10 +29,12 @@ stdenv.mkDerivation {
         xargs -0 -tr cp --reflink=auto -t ./postscript
     done
     set -e
-    popd
+    popd > /dev/null
+  '';
 
-    substitute ${neatmkfn}/gen.sh $sourceRoot/gen.sh --replace ./mkfn mkfn
-    chmod a+x $sourceRoot/gen.sh
+  patchPhase = ''
+    substitute ${neatmkfn}/gen.sh ./gen.sh --replace ./mkfn mkfn
+    chmod a+x ./gen.sh
   '';
 
   makeFlags = [ "DESTDIR=$(out)" "datarootdir=/share" ];
