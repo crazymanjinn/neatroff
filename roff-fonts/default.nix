@@ -1,45 +1,45 @@
 { stdenv
 , extraFontPkgs ? [ ]
-, lib
 , ghostscript
 , gyre-fonts
-, nixpkgs
-, neatmkfn
+, lib
 , mkfn
+, python3
 }:
 let
   fonts = [ ghostscript gyre-fonts ] ++ extraFontPkgs;
 in
 stdenv.mkDerivation {
   pname = "roff-fonts";
-  version = lib.trivial.release + "-g" + nixpkgs.shortRev;
-  buildInputs = [ neatmkfn mkfn ] ++ fonts;
+  version = lib.trivial.release;
+  buildInputs = [
+    fonts
+    mkfn
+
+    (python3.withPackages (p: with p; [ fontforge ]))
+  ];
+
   srcs = ./.;
 
   enableParallelBuilding = true;
 
   postUnpack = ''
-    mkdir -p $sourceRoot/fonts/truetype $sourceRoot/fonts/postscript
-    pushd $sourceRoot/fonts > /dev/null
-    set +e
-    for f in ${lib.concatStringsSep " " fonts}; do
-      find -L $f/share/fonts -xdev -type f -name '*.[ot]tf' -print0 |
-        xargs -0 -tr cp --reflink=auto -t ./truetype
-      find -L $f/share -xdev -type f -name '*.afm' -print0 |
-        xargs -0 -tr cp --reflink=auto -t ./postscript
+    fDir=$sourceRoot/fonts
+    mkdir -p $fDir/{afm,otf,ttf}
+    for fType in afm otf ttf; do
+      mkdir -p $fDir/$fType
+      for d in ${lib.concatStringsSep " " fonts}; do
+        find -L $d/share -xdev -type f -name "*.$fType" -print0 |
+          xargs -0 -tr cp --reflink=auto -t $fDir/$fType
+      done
     done
-    set -e
-    popd > /dev/null
   '';
 
-  patchPhase = ''
-    substitute ${neatmkfn}/gen.sh ./gen.sh --replace ./mkfn mkfn
-    chmod a+x ./gen.sh
+  postPatch = ''
+    patchShebangs --build extract_font_names
   '';
 
   makeFlags = [ "DESTDIR=$(out)" "datarootdir=/share" ];
-
-  buildFlags = [ "GENSH=./gen.sh" ];
 
   meta.licenses = lib.unique (map (d: d.meta.license) fonts) ++
     [ lib.licenses.mit ];

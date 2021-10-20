@@ -68,7 +68,6 @@
             };
           roff-fonts = pkgs.callPackage ./roff-fonts {
             inherit (neatX) mkfn;
-            inherit neatmkfn nixpkgs;
           };
           roff-macros = pkgs.callPackage ./roff-macros.nix {
             inherit neatroff_make version;
@@ -100,14 +99,23 @@
         in
         {
           neatroff = (pkgs.symlinkJoin {
-            name = "neatroff";
-            paths = pkgs.lib.attrValues subPackages;
-          }).overrideAttrs (oldAttrs: {
-            pname = oldAttrs.name;
-            name = "${oldAttrs.name}-${version}";
+            name = "neatroff-${version}";
+            pname = "neatroff";
             inherit version;
+            paths = pkgs.lib.attrValues subPackages ++ [
+              pkgs.ghostscript
+              pkgs.ghostscript.man
+            ];
+
+            buildInputs = [ pkgs.makeWrapper ];
+            postBuild = ''
+              wrapProgram $out/bin/gs \
+                --add-flags -I${subPackages.roff-fonts}/share/neatroff
+            '';
+
             meta.mainProgram = "roff";
-          } // subPackages);
+
+          }).overrideAttrs (oldAttrs: { } // subPackages);
         };
     } //
     flake-utils.lib.eachDefaultSystem (system:
@@ -118,6 +126,9 @@
       };
     in
     {
+      packages = { inherit (pkgs) neatroff; };
+      defaultPackage = pkgs.neatroff;
+
       legacyPackages = {
         inherit (pkgs.neatroff)
           eqn
@@ -133,7 +144,17 @@
           tbl
           ;
       };
-      packages = { inherit (pkgs) neatroff; };
-      defaultPackage = pkgs.neatroff;
+
+      devShell = pkgs.mkShell {
+        propagatedBuildInputs = with pkgs; [
+          black
+          (python3.withPackages (p: with p; [
+            fontforge
+            ipython
+            isort
+          ]))
+        ];
+      };
+
     });
 }
